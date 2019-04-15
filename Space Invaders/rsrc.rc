@@ -1,0 +1,10 @@
+#define invaders 100
+#define aircraft 101
+#define barrier 102
+
+500 ICON MOVEABLE PURE LOADONCALL DISCARDABLE "ICON.ICO"
+501 icon "icon.ico"
+
+invaders BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "characters.bmp"
+aircraft BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "aircraft.bmp"
+barrier BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "barrier.bmp"

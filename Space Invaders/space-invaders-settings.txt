@@ -1,0 +1,31 @@
+branco
+
+matriz:160
+sat:0
+lum:184
+127,127,127
+
+matriz:160
+sat:0
+lum:94
+100,100,100
+
+tam: 650x446
+controls: space - shoot
+          arrows - movement
+
+total area - 330px
+
+distance from wall - 88px
+distance from invaders vertical - 16px
+distance from invaders horizontal - 30px
+move 4px in horizontal- timer
+20px down from every corner hit
+start y position - 79px
+
+barriers - 331px (y)
+         - 168px (x)
+         - each other - 94px
+
+aircraft - distance from wall - 136px
+         - movement - 6px
