@@ -102,6 +102,8 @@
 	invaders equ 100
     aircraft equ 101
     barrier  equ 102
+    ground   equ 103
+    title_g  equ 104
 
 	CREF_TRANSPARENT  EQU 0FF00FFh
 	CREF_TRANSPARENT2 EQU 0FF0000h
@@ -119,10 +121,12 @@
         hWnd          dd 0
         hInstance     dd 0
 
-	hBmpInvaders dd 0
-    hBmpAircraft dd 0
-    hBmpBarrier  dd 0	
-	
+	    hBmpInvaders dd 0
+        hBmpAircraft dd 0
+        hBmpBarrier  dd 0
+        hBmpGround   dd 0
+        hBmpTitle    dd 0
+
     .data?
     	posX		dd ?
     	posY		dd ?
@@ -157,6 +161,12 @@ start:
 
     invoke LoadBitmap, hInstance, barrier
     mov hBmpBarrier, eax
+
+    invoke LoadBitmap, hInstance, ground
+    mov hBmpGround, eax
+
+    invoke LoadBitmap, hInstance, title_g
+    mov hBmpTitle, eax
 
     invoke GetCommandLine        ; provides the command line address
     mov CommandLine, eax
@@ -213,7 +223,7 @@ WinMain proc hInst     :DWORD,
         ;================================
 
         mov Wwd, 650
-        mov Wht, 446
+        mov Wht, 500
 
         invoke GetSystemMetrics,SM_CXSCREEN ; get screen width in pixels
         invoke TopXY,Wwd,eax
@@ -370,7 +380,7 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 
 	invoke  CreateCompatibleDC, hDC
 	mov	memDC, eax
-
+    
     invoke SelectObject, memDC, hBmpInvaders
 	mov	hOld, eax
 	
@@ -417,8 +427,24 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
     invoke SelectObject, memDC, hBmpAircraft
     mov hOld, eax
 
+    invoke BitBlt, hDC, 136, 387, 30, 20, memDC, 0, 0, SRCCOPY
+
     invoke SelectObject, memDC, hBmpBarrier
     mov hOld, eax
+
+    invoke BitBlt, hDC, 168, 331, 34, 36, memDC, 0, 0, SRCCOPY
+    invoke BitBlt, hDC, 262, 331, 34, 36, memDC, 0, 0, SRCCOPY
+    invoke BitBlt, hDC, 356, 331, 34, 36, memDC, 0, 0, SRCCOPY
+
+    invoke SelectObject, memDC, hBmpGround
+    mov hOld, eax
+
+    invoke BitBlt, hDC, 0, 409, 630, 49, memDC, 0, 0, SRCCOPY
+
+    invoke SelectObject, memDC, hBmpTitle
+	mov	hOld, eax
+
+    invoke BitBlt, hDC, 127, 0, 300, 19, memDC, 0, 0, SRCCOPY
 	
 	invoke SelectObject, hDC, hOld
 	invoke DeleteDC, memDC
