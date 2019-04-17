@@ -39,6 +39,14 @@
 
 ; #########################################################################
 
+;
+; @authors 17184 --> Iuri Guimarães Slywitch
+;          17188 --> Luca Assumpção Dillenburg
+;          17162 --> André Amadeu Satorres
+;
+
+
+
 ; ------------------------------------------------------------------------
 ; MACROS are a method of expanding text at assembly time. This allows the
 ; programmer a tidy and convenient way of using COMMON blocks of code with
@@ -127,7 +135,9 @@
 
         ThreadID dd 0
         hThread dd 0
-	    hEventStart dd 0
+        threadControl dd 0
+	    hEventStart  dd 0
+        hEventStart1 dd 0
 
 	    hBmpInvaders dd 0
         hBmpAircraft dd 0
@@ -162,10 +172,9 @@
 
         shipX dd 136
         shipY dd 387
-    
-    .data?
-        bulletX dd ?
-        bulletY dd ?
+
+        bulletX dd 0
+        bulletY dd 368
 
 ; #########################################################################
 
@@ -358,9 +367,11 @@ WndProc proc hWin   :DWORD,
 
 	mov hEventStart, eax
 		
-	mov eax,OFFSET ThreadProc
+	mov eax, OFFSET ThreadProc
 
 	invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
+
+    inc ThreadID
 
 	mov    hThread, eax
 
@@ -374,7 +385,18 @@ WndProc proc hWin   :DWORD,
             add shipX, 6
           .endif
         .elseif wParam == VK_SPACE
-          add shipX, 6
+          invoke CreateEvent, NULL, FALSE, FALSE, NULL
+	      mov hEventStart1, eax
+          mov  eax, OFFSET ThreadProc1
+		  invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
+          mov threadControl, eax
+          invoke CloseHandle, eax
+        .elseif wParam == VK_RETURN
+          rdtsc
+          mov bx, 6
+          div bx
+          inc dx
+          add shipY, dx
         .endif
 
         invoke InvalidateRect, hWnd, NULL, TRUE
@@ -438,6 +460,21 @@ WndProc proc hWin   :DWORD,
         invoke InvalidateRect, hWnd, NULL, TRUE
 
     .elseif uMsg == WM_BULLET
+
+        .if bulletY == 368
+          ;Adicionando posicao inicial da bala
+          mov eax, shipX
+          add eax, 12
+          mov bulletX, eax
+
+          sub bulletY, 4
+
+        .elseif bulletY != 0
+          sub bulletY, 4
+        .elseif bulletY == 0
+          mov bulletX, 0
+          mov bulletY, 368
+        .endif
 
         invoke InvalidateRect, hWnd, NULL, TRUE
 
@@ -579,16 +616,16 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 
     invoke BitBlt, hDC, 0, 409, 630, 49, memDC, 0, 0, SRCCOPY
 
-    ;invoke SelectObject, memDC, hBmpBullet
-    ;mov hOld, eax
-
-    ;invoke BitBlt, hDC, 0, 409, 630, 49, memDC, 0, 0, SRCCOPY
+    .if bulletX != 0
+      invoke SelectObject, memDC, hBmpBullet
+      mov hOld, eax
+      invoke BitBlt, hDC, bulletX, bulletY, 6, 16, memDC, 0, 0, SRCCOPY
+    .endif
 	
 	invoke SelectObject, hDC, hOld
 	invoke DeleteDC, memDC
 
 	return 0
-
 Paint_Proc endp
 
 ThreadProc PROC USES ecx Param:DWORD
@@ -602,5 +639,19 @@ ThreadProc PROC USES ecx Param:DWORD
 
     ret
 ThreadProc ENDP
+
+ThreadProc1 PROC USES ecx Param:DWORD
+    invoke WaitForSingleObject, hEventStart1, 30
+
+    .if eax == WAIT_TIMEOUT
+        invoke PostMessage, hWnd, WM_BULLET, NULL, NULL
+        .if bulletY != 0
+          jmp ThreadProc1
+        .endif
+        invoke ExitThread, threadControl
+    .endif
+
+ret
+ThreadProc1 ENDP
 
 end start
