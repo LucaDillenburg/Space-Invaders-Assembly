@@ -55,34 +55,18 @@ include space-invaders.inc
     hBmpTitle    dd 0
     hBmpBullet   dd 0
 
+; auxiliares (apagar)
+    header_format db "A: %d",0
+    buffer    db 256 dup(?)
+    msg1 db "a",0
+
 ; estrutura
-    invert    db 0
-    direction db 0
-
-    posC1 dd 81
-    posC2 dd 147
-    posC3 dd 209
-    posC4 dd 273
-    posC5 dd 337
-    posC6 dd 401
-
-    posR1 dd 79
-    posR2 dd 115
-    posR3 dd 151
-    posR4 dd 187
-    posR5 dd 223
-    posR6 dd 259
-
-    I1 dd 0
-    I2 dd 40
-    I3 dd 80
-    I4 dd 120
-    I5 dd 160
-    I6 dd 200
+    isInvert       db 0
+    directionRight db 0
 
     ship shipStruct <136, INITIAL_Y_SHIP>
     bullet bulletStruct <>
-    invadersArray invader 36 dup(<>)
+    invaders invader AMOUNT_INVADERS dup(<1,1>)
 
 .code
 start:
@@ -222,6 +206,9 @@ WndProc proc hWin   :DWORD,
 	LOCAL Ps 	:PAINTSTRUCT
 	LOCAL hDC	:DWORD  ; handle do dispositivo (tela)
 
+    LOCAL iLinha :BYTE
+    LOCAL iColuna:BYTE
+
 ; Tratar as mensagens mandadas pelo sistema operacional (tais mensagens chegam nesse metodo atraves dos parametros)
 ; ps: Each message can have additional values associated with it in the two parameters, wParam & lParam
 
@@ -250,6 +237,33 @@ WndProc proc hWin   :DWORD,
 	    mov hThread, eax
 
         ; Inicialização do array de invaders.
+        mov esi, offset invaders
+        mov iLinha, 0
+        mov iColuna, 0
+        loopInitializeInvaders:
+            ; x = spaceBetweenLines * iLinha + posXFirst
+            mov eax, spaceBetweenLines
+            mul iLinha
+            add eax, posXFirst
+            mov dword ptr [esi], eax ;.x
+
+            ; y = spaceBetweenInvaders * iColuna + posYFirst
+            mov eax, spaceBetweenInvaders
+            mul iColuna
+            add eax, posYFirst
+            mov dword ptr [esi+4], eax ;.y
+
+            .if iColuna == INVADERS_PER_LINE - 1
+                inc iLinha
+                mov iColuna, 0
+            .else
+                inc iColuna
+            .endif
+
+            add esi, INVADER_SIZE
+
+            cmp iLinha, 6
+            jne loopInitializeInvaders
 
     .elseif uMsg == WM_KEYDOWN
         .if wParam == VK_LEFT
@@ -287,59 +301,58 @@ WndProc proc hWin   :DWORD,
         invoke InvalidateRect, hWnd, NULL, TRUE
 
     .elseif uMsg == WM_MOVEMENT
-        .if direction == 0
-          .if posC6 == 513
-            mov direction, 1
-            add posR1, 20
-            add posR2, 20
-            add posR3, 20
-            add posR4, 20
-            add posR5, 20
-            add posR6, 20
-          .else
-            add posC1, 4
-            add posC2, 4
-            add posC3, 4
-            add posC4, 4
-            add posC5, 4 
-            add posC6, 4
-          .endif
-          
-        .elseif direction == 1
-          .if posC1 == 81
-            mov direction, 0
-            add posR1, 20
-            add posR2, 20
-            add posR3, 20
-            add posR4, 20
-            add posR5, 20
-            add posR6, 20
-          .else
-            sub posC1, 4
-            sub posC2, 4
-            sub posC3, 4
-            sub posC4, 4
-            sub posC5, 4
-            sub posC6, 4
-          .endif
+        ; al: quanto vai somar em X
+        ; ah: quanto vai somar em Y
+
+        ; verifica se vai mudar direcao e se precisar mudar direcao, a muda
+            ; get numero de bytes ateh ultimo invader da primeira linha
+        mov eax, INVADERS_PER_LINE
+        dec eax
+        mov ebx, INVADER_SIZE
+        mul ebx
+            ; vai com esi para a posicao do ultimo invader da primeira linha
+        mov esi, offset invaders
+        add esi, eax
+        mov ebx, dword ptr [esi] ;.x
+            ; verifica se vai mudar de direcao e pular linha
+        .if ebx < LEFT_LIMITATOR_INVADERS
+            mov directionRight, 1
+            mov ah, -AMOUNT_INVADERS_MOVE_Y
+        .elseif ebx > RIGHT_LIMITATOR_INVADERS
+            mov directionRight, 0
+            mov ah, -AMOUNT_INVADERS_MOVE_Y
         .endif
 
-        .if invert == 0
-          mov invert, 1
-          add I1, 20
-          add I2, 20
-          add I3, 20
-          add I4, 20
-          add I5, 20
-          add I6, 20
-        .elseif invert == 1
-          mov invert, 0
-          sub I1, 20
-          sub I2, 20
-          sub I3, 20
-          sub I4, 20
-          sub I5, 20
-          sub I6, 20
+        .if directionRight == 0
+            mov al, -AMOUNT_INVADERS_MOVE_X
+        .else
+            mov al, AMOUNT_INVADERS_MOVE_X
+        .endif
+
+        ; mover cada invader
+        mov esi, offset invaders
+        mov cl, 0
+        loopMoveInvaders:
+            ;x
+            mov edx, 0
+            mov dl, al
+            add dword ptr [esi], edx ;.x
+
+            ;y
+            mov edx, 0
+            mov dl, ah
+            add dword ptr [esi+4], edx ;.y
+
+            add esi, INVADER_SIZE
+            inc cl
+
+            cmp cl, AMOUNT_INVADERS
+            jne loopMoveInvaders
+
+        .if isInvert == 0
+          mov isInvert, 1
+        .else
+          mov isInvert, 0
         .endif
 
         invoke InvalidateRect, hWnd, NULL, TRUE
@@ -389,59 +402,59 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	LOCAL hOld:DWORD
 	LOCAL memDC:DWORD
 
+    LOCAL x:DWORD
+    LOCAL y:DWORD
+    LOCAL sum_Y_Sprite:DWORD
+
 	invoke  CreateCompatibleDC, hDC
 	mov	memDC, eax
     
     invoke SelectObject, memDC, hBmpInvaders
 	mov	hOld, eax
-	
-    ; First invaders.
-	invoke BitBlt, hDC, posC1, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR1, 34, 20, memDC, 0, I1, SRCCOPY
 
-    ; Second invaders.
-	invoke BitBlt, hDC, posC1, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR2, 34, 20, memDC, 0, I2, SRCCOPY
+    .if isInvert != 0
+        mov sum_Y_Sprite, HEIGHT_INVADER
+    .else
+        mov sum_Y_Sprite, 0
+    .endif
 
-    ; Third invaders.
-	invoke BitBlt, hDC, posC1, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR3, 34, 20, memDC, 0, I3, SRCCOPY
+    mov esi, offset invaders
+    mov cl, 0 ;iColuna
+    mov ch, 0 ;iLinha
+    .WHILE 1
+        .if byte ptr [esi+8] != 0 ;verifica se estah vivo
+            mov eax, dword ptr [esi]    ;.x
+            mov x, eax
+            mov eax, dword ptr [esi+4]  ;.y
+            mov y, eax
 
-    ; Fourth invaders.
-	invoke BitBlt, hDC, posC1, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR4, 34, 20, memDC, 0, I4, SRCCOPY
+            ; eax = eax * HEIGHT_INVADER + sum_Y_Sprite
+            mov eax, 0
+            mov al, ch
+            mov ebx, 0
+            mov bl, HEIGHT_INVADER
+            add bl, bl
+            mul ebx
+            add eax, sum_Y_Sprite
 
-    ; Fifth invaders.
-	invoke BitBlt, hDC, posC1, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR5, 34, 20, memDC, 0, I5, SRCCOPY
+            invoke BitBlt, hDC, x, y, WIDTH_INVADER, HEIGHT_INVADER, memDC, 0, eax, SRCCOPY
+        .endif
 
-    ; Sixth invaders.
-	invoke BitBlt, hDC, posC1, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR6, 34, 20, memDC, 0, I6, SRCCOPY
+        .if cl == 5
+            mov cl, 0
+            
+            .if ch == 5
+                jmp endPrintInvaders
+            .else
+                inc ch
+            .endif
+        .else
+            inc cl
+        .endif
+
+        add esi, INVADER_SIZE
+    .ENDW
+    endPrintInvaders:
 
     invoke SelectObject, memDC, hBmpAircraft
     mov hOld, eax
