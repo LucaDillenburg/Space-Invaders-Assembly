@@ -1,0 +1,16 @@
+#define imgInvaders 100
+#define imgAircraft 101
+#define imgBarrier 102
+#define imgGround 103
+#define imgTitle 104
+#define imgBullet 105
+
+500 ICON MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/ICON.ICO"
+501 icon "imgs/icon.ico"
+
+imgInvaders BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/characters.bmp"
+imgAircraft BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/aircraft.bmp"
+imgBarrier BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/barrier.bmp"
+imgGround BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/ground.bmp"
+imgTitle BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/title.bmp"
+imgBullet BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/bullet.bmp"
