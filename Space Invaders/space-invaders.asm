@@ -128,6 +128,22 @@
 ; ------------------------------------------------------------------------
 
     .data
+        invader struct
+          x dd ?
+          y dd ?
+          w dd ?
+          h dd ?
+          e db 1
+        invader ends
+
+        nave struct
+          x dd ?
+          y dd ?
+          w dd ?
+          h dd ?
+          vidas db 5
+        nave ends
+
         szDisplayName db "Space Invaders v1.0",0
         CommandLine   dd 0
         hWnd          dd 0
@@ -136,18 +152,19 @@
         ThreadID dd 0
         hThread dd 0
         threadControl dd 0
-	    hEventStart  dd 0
+	      hEventStart  dd 0
         hEventStart1 dd 0
 
-	    hBmpInvaders dd 0
+	      hBmpInvaders dd 0
         hBmpAircraft dd 0
         hBmpBarrier  dd 0
         hBmpGround   dd 0
         hBmpTitle    dd 0
         hBmpBullet   dd 0
 
-        invert db 0
+        invert    db 0
         direction db 0
+        eBullet   db 0
 
         posC1 dd 81
         posC2 dd 147
@@ -175,6 +192,8 @@
 
         bulletX dd 0
         bulletY dd 368
+
+        invadersArray invader 36 dup(<>)
 
 ; #########################################################################
 
@@ -346,13 +365,12 @@ WndProc proc hWin   :DWORD,
     
     .elseif uMsg == WM_PAINT
 
-	invoke BeginPaint, hWin, ADDR Ps
-	mov	hDC, eax
+	  invoke BeginPaint, hWin, ADDR Ps
+	  mov	hDC, eax
 	
-	invoke  Paint_Proc, hWin, hDC
+	  invoke  Paint_Proc, hWin, hDC
 	
-	invoke EndPaint, hWin, ADDR Ps
-
+	  invoke EndPaint, hWin, ADDR Ps
 
     .elseif uMsg == WM_CREATE
     ; --------------------------------------------------------------------
@@ -365,15 +383,19 @@ WndProc proc hWin   :DWORD,
     ; --------------------------------------------------------------------
     invoke CreateEvent, NULL, FALSE, FALSE, NULL
 
-	mov hEventStart, eax
+	  mov hEventStart, eax
 		
-	mov eax, OFFSET ThreadProc
+	  mov eax, OFFSET ThreadProc
 
-	invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
+	  invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
 
     inc ThreadID
 
-	mov    hThread, eax
+	  mov    hThread, eax
+
+    ; Inicialização do array de invaders.
+    :loopArray
+    jmp loopArray
 
     .elseif uMsg == WM_KEYDOWN
         .if wParam == VK_LEFT
@@ -385,18 +407,16 @@ WndProc proc hWin   :DWORD,
             add shipX, 6
           .endif
         .elseif wParam == VK_SPACE
-          invoke CreateEvent, NULL, FALSE, FALSE, NULL
-	      mov hEventStart1, eax
-          mov  eax, OFFSET ThreadProc1
-		  invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
-          mov threadControl, eax
-          invoke CloseHandle, eax
+          .if eBullet != 1
+            mov eBullet, 1
+            invoke CreateEvent, NULL, FALSE, FALSE, NULL
+            mov hEventStart1, eax
+            mov  eax, OFFSET ThreadProc1
+            invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
+            mov threadControl, eax
+            invoke CloseHandle, eax
+          .endif
         .elseif wParam == VK_RETURN
-          rdtsc
-          mov bx, 6
-          div bx
-          inc dx
-          add shipY, dx
         .endif
 
         invoke InvalidateRect, hWnd, NULL, TRUE
@@ -460,20 +480,18 @@ WndProc proc hWin   :DWORD,
         invoke InvalidateRect, hWnd, NULL, TRUE
 
     .elseif uMsg == WM_BULLET
-
         .if bulletY == 368
           ;Adicionando posicao inicial da bala
           mov eax, shipX
           add eax, 12
           mov bulletX, eax
-
           sub bulletY, 4
-
         .elseif bulletY != 0
           sub bulletY, 4
         .elseif bulletY == 0
           mov bulletX, 0
           mov bulletY, 368
+          mov eBullet, 0
         .endif
 
         invoke InvalidateRect, hWnd, NULL, TRUE
@@ -543,84 +561,84 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	invoke  CreateCompatibleDC, hDC
 	mov	memDC, eax
 
-    ;invoke SelectObject, memDC, hBmpTitle
+  ;invoke SelectObject, memDC, hBmpTitle
 	;mov	hOld, eax
 
-    ;invoke BitBlt, hDC, 127, 0, 300, 19, memDC, 0, 0, SRCCOPY
+  ;invoke BitBlt, hDC, 127, 0, 300, 19, memDC, 0, 0, SRCCOPY
     
-    invoke SelectObject, memDC, hBmpInvaders
+  invoke SelectObject, memDC, hBmpInvaders
 	mov	hOld, eax
 	
-    ; First invaders.
+  ; First invaders.
 	invoke BitBlt, hDC, posC1, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR1, 34, 20, memDC, 0, I1, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR1, 34, 20, memDC, 0, I1, SRCCOPY
+  invoke BitBlt, hDC, posC2, posR1, 34, 20, memDC, 0, I1, SRCCOPY
+  invoke BitBlt, hDC, posC3, posR1, 34, 20, memDC, 0, I1, SRCCOPY
+  invoke BitBlt, hDC, posC4, posR1, 34, 20, memDC, 0, I1, SRCCOPY
+  invoke BitBlt, hDC, posC5, posR1, 34, 20, memDC, 0, I1, SRCCOPY
+  invoke BitBlt, hDC, posC6, posR1, 34, 20, memDC, 0, I1, SRCCOPY
 
-    ; Second invaders.
+  ; Second invaders.
 	invoke BitBlt, hDC, posC1, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR2, 34, 20, memDC, 0, I2, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR2, 34, 20, memDC, 0, I2, SRCCOPY
+  invoke BitBlt, hDC, posC2, posR2, 34, 20, memDC, 0, I2, SRCCOPY
+  invoke BitBlt, hDC, posC3, posR2, 34, 20, memDC, 0, I2, SRCCOPY
+  invoke BitBlt, hDC, posC4, posR2, 34, 20, memDC, 0, I2, SRCCOPY
+  invoke BitBlt, hDC, posC5, posR2, 34, 20, memDC, 0, I2, SRCCOPY
+  invoke BitBlt, hDC, posC6, posR2, 34, 20, memDC, 0, I2, SRCCOPY
 
-    ; Third invaders.
+  ; Third invaders.
 	invoke BitBlt, hDC, posC1, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR3, 34, 20, memDC, 0, I3, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR3, 34, 20, memDC, 0, I3, SRCCOPY
+  invoke BitBlt, hDC, posC2, posR3, 34, 20, memDC, 0, I3, SRCCOPY
+  invoke BitBlt, hDC, posC3, posR3, 34, 20, memDC, 0, I3, SRCCOPY
+  invoke BitBlt, hDC, posC4, posR3, 34, 20, memDC, 0, I3, SRCCOPY
+  invoke BitBlt, hDC, posC5, posR3, 34, 20, memDC, 0, I3, SRCCOPY
+  invoke BitBlt, hDC, posC6, posR3, 34, 20, memDC, 0, I3, SRCCOPY
 
-    ; Fourth invaders.
+  ; Fourth invaders.
 	invoke BitBlt, hDC, posC1, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR4, 34, 20, memDC, 0, I4, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR4, 34, 20, memDC, 0, I4, SRCCOPY
+  invoke BitBlt, hDC, posC2, posR4, 34, 20, memDC, 0, I4, SRCCOPY
+  invoke BitBlt, hDC, posC3, posR4, 34, 20, memDC, 0, I4, SRCCOPY
+  invoke BitBlt, hDC, posC4, posR4, 34, 20, memDC, 0, I4, SRCCOPY
+  invoke BitBlt, hDC, posC5, posR4, 34, 20, memDC, 0, I4, SRCCOPY
+  invoke BitBlt, hDC, posC6, posR4, 34, 20, memDC, 0, I4, SRCCOPY
 
-    ; Fifth invaders.
+  ; Fifth invaders.
 	invoke BitBlt, hDC, posC1, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR5, 34, 20, memDC, 0, I5, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR5, 34, 20, memDC, 0, I5, SRCCOPY
+  invoke BitBlt, hDC, posC2, posR5, 34, 20, memDC, 0, I5, SRCCOPY
+  invoke BitBlt, hDC, posC3, posR5, 34, 20, memDC, 0, I5, SRCCOPY
+  invoke BitBlt, hDC, posC4, posR5, 34, 20, memDC, 0, I5, SRCCOPY
+  invoke BitBlt, hDC, posC5, posR5, 34, 20, memDC, 0, I5, SRCCOPY
+  invoke BitBlt, hDC, posC6, posR5, 34, 20, memDC, 0, I5, SRCCOPY
 
-    ; Sixth invaders.
+  ; Sixth invaders.
 	invoke BitBlt, hDC, posC1, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC2, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC3, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC4, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC5, posR6, 34, 20, memDC, 0, I6, SRCCOPY
-    invoke BitBlt, hDC, posC6, posR6, 34, 20, memDC, 0, I6, SRCCOPY
+  invoke BitBlt, hDC, posC2, posR6, 34, 20, memDC, 0, I6, SRCCOPY
+  invoke BitBlt, hDC, posC3, posR6, 34, 20, memDC, 0, I6, SRCCOPY
+  invoke BitBlt, hDC, posC4, posR6, 34, 20, memDC, 0, I6, SRCCOPY
+  invoke BitBlt, hDC, posC5, posR6, 34, 20, memDC, 0, I6, SRCCOPY
+  invoke BitBlt, hDC, posC6, posR6, 34, 20, memDC, 0, I6, SRCCOPY
 
-    invoke SelectObject, memDC, hBmpAircraft
+  invoke SelectObject, memDC, hBmpAircraft
+  mov hOld, eax
+
+  invoke BitBlt, hDC, shipX, shipY, 30, 20, memDC, 0, 0, SRCCOPY
+
+  invoke SelectObject, memDC, hBmpBarrier
+  mov hOld, eax
+
+  invoke BitBlt, hDC, 200, 331, 34, 36, memDC, 0, 0, SRCCOPY
+  invoke BitBlt, hDC, 294, 331, 34, 36, memDC, 0, 0, SRCCOPY
+  invoke BitBlt, hDC, 388, 331, 34, 36, memDC, 0, 0, SRCCOPY
+
+  invoke SelectObject, memDC, hBmpGround
+  mov hOld, eax
+
+  invoke BitBlt, hDC, 0, 409, 630, 49, memDC, 0, 0, SRCCOPY
+
+  .if bulletX != 0
+    invoke SelectObject, memDC, hBmpBullet
     mov hOld, eax
-
-    invoke BitBlt, hDC, shipX, shipY, 30, 20, memDC, 0, 0, SRCCOPY
-
-    invoke SelectObject, memDC, hBmpBarrier
-    mov hOld, eax
-
-    invoke BitBlt, hDC, 200, 331, 34, 36, memDC, 0, 0, SRCCOPY
-    invoke BitBlt, hDC, 294, 331, 34, 36, memDC, 0, 0, SRCCOPY
-    invoke BitBlt, hDC, 388, 331, 34, 36, memDC, 0, 0, SRCCOPY
-
-    invoke SelectObject, memDC, hBmpGround
-    mov hOld, eax
-
-    invoke BitBlt, hDC, 0, 409, 630, 49, memDC, 0, 0, SRCCOPY
-
-    .if bulletX != 0
-      invoke SelectObject, memDC, hBmpBullet
-      mov hOld, eax
-      invoke BitBlt, hDC, bulletX, bulletY, 6, 16, memDC, 0, 0, SRCCOPY
-    .endif
+    invoke BitBlt, hDC, bulletX, bulletY, 6, 16, memDC, 0, 0, SRCCOPY
+  .endif
 	
 	invoke SelectObject, hDC, hOld
 	invoke DeleteDC, memDC
@@ -629,29 +647,29 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 Paint_Proc endp
 
 ThreadProc PROC USES ecx Param:DWORD
-    invoke WaitForSingleObject, hEventStart, 500
+  invoke WaitForSingleObject, hEventStart, 500
 
-    .if eax == WAIT_TIMEOUT
-        invoke PostMessage, hWnd, WM_MOVEMENT, NULL, NULL
-        ; Aqui deve-se programar a saida da thread quando acabar o jogo.
-        jmp ThreadProc
-    .endif
+  .if eax == WAIT_TIMEOUT
+      invoke PostMessage, hWnd, WM_MOVEMENT, NULL, NULL
+      ; Aqui deve-se programar a saida da thread quando acabar o jogo.
+      jmp ThreadProc
+  .endif
 
-    ret
+  ret
 ThreadProc ENDP
 
 ThreadProc1 PROC USES ecx Param:DWORD
-    invoke WaitForSingleObject, hEventStart1, 30
+  invoke WaitForSingleObject, hEventStart1, 30
 
-    .if eax == WAIT_TIMEOUT
-        invoke PostMessage, hWnd, WM_BULLET, NULL, NULL
-        .if bulletY != 0
-          jmp ThreadProc1
-        .endif
-        invoke ExitThread, threadControl
-    .endif
+  .if eax == WAIT_TIMEOUT
+      invoke PostMessage, hWnd, WM_BULLET, NULL, NULL
+      .if bulletY != 0
+        jmp ThreadProc1
+      .endif
+      invoke ExitThread, threadControl
+  .endif
 
-ret
+  ret
 ThreadProc1 ENDP
 
 end start
