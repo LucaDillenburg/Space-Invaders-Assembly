@@ -53,6 +53,8 @@ bulletStruct ends
     imgGround   equ 103
     imgTitle_g  equ 104
     imgBullet   equ 105
+    imgIntro1   equ 106
+    imgIntro2   equ 107
 
     WM_MOVEMENT equ WM_USER+100h
     WM_BULLET equ WM_USER+101h
@@ -72,15 +74,16 @@ bulletStruct ends
     LEFT_LIMITATOR equ 136
     RIGHT_LIMITATOR equ 466
 
-    AMOUNT_INVADERS_MOVE_X   equ 1;20
-    AMOUNT_INVADERS_MOVE_Y   equ 0 ;30
-    LEFT_LIMITATOR_INVADERS  equ 120
-    RIGHT_LIMITATOR_INVADERS equ 480
+    AMOUNT_INVADERS_MOVE_X   equ 4;20
+    AMOUNT_INVADERS_MOVE_Y   equ 20 ;30
+    LEFT_LIMITATOR_INVADERS  equ 81
+    RIGHT_LIMITATOR_INVADERS equ 449
 
-    posYFirst            equ 70
-    posXFirst            equ LEFT_LIMITATOR_INVADERS
-    spaceBetweenInvaders equ 45
-    spaceBetweenLines    equ 70
+    posXFirst equ 81
+    posYFirst equ 79
+
+    spaceBetweenInvaders equ 32
+    spaceBetweenLines    equ 16
 
     WIDTH_INVADER equ 34
     HEIGHT_INVADER equ 20
