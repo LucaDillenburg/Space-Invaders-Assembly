@@ -10,6 +10,14 @@ include space-invaders.inc
 ;          17162 --> André Amadeu Satorres
 ;
 
+; Deve-se fazer a checagem das teclas enquanto o jogo ainda n comecou, intro == 0
+; Fazer os invaders atirarem
+; Fazer a pontuacao
+; Fazer quantidade de vidas e niveis mais dificeis dos invaders.
+
+; Comando para parar thread da bala.
+;invoke ExitThread, threadControl
+
 ; ###################   MACROS   ###################
 
     ; 1. szText
@@ -33,6 +41,9 @@ include space-invaders.inc
     ENDM
 
 .data
+    buffer1          db 256 dup(?)
+    header_format1   db "eax : %d",0
+
 ; outros
     szDisplayName db "Space Invaders v1.0",0
     CommandLine   dd 0
@@ -54,6 +65,8 @@ include space-invaders.inc
     hBmpIntro1   dd 0
     hBmpIntro2   dd 0
 
+    rNumber dd 0
+
 ; auxiliares (apagar)
     header_format db "A: %d",0
     buffer    db 256 dup(?)
@@ -65,6 +78,7 @@ include space-invaders.inc
 
     ship shipStruct <136, INITIAL_Y_SHIP>
     bullet bulletStruct <>
+    bulletInvaders bulletStInv 6 dup(<1,1>)
     invaders invader AMOUNT_INVADERS dup(<1,1>)
 
     qttX dd 0
@@ -74,6 +88,17 @@ include space-invaders.inc
     intro dd 1
 
 .code
+
+getRandomNumber proc uses eax
+    generate:
+        invoke GetTickCount
+        invoke nseed, eax
+        ; Random number de 0 a 5
+        invoke nrandom, 5
+        mov rNumber, eax
+        ret
+getRandomNumber endp
+
 start:
     invoke GetModuleHandle, NULL ; provides the instance handle
     mov hInstance, eax
@@ -225,6 +250,8 @@ WndProc proc hWin   :DWORD,
 
     LOCAL alive:BYTE
 
+    LOCAL countBullet:BYTE
+
 ; Tratar as mensagens mandadas pelo sistema operacional (tais mensagens chegam nesse metodo atraves dos parametros)
 ; ps: Each message can have additional values associated with it in the two parameters, wParam & lParam
 
@@ -240,6 +267,8 @@ WndProc proc hWin   :DWORD,
 	    invoke EndPaint, hWin, ADDR Ps
 
     .elseif uMsg == WM_CREATE ; This message is sent to WndProc during the CreateWindowEx 
+        ; Thread dos invaders.
+
         invoke CreateEvent, NULL, FALSE, FALSE, NULL
 
 	    mov hEventStart, eax
@@ -251,6 +280,18 @@ WndProc proc hWin   :DWORD,
         inc ThreadID
 
 	    mov hThread, eax
+
+        ; Thread da bala.
+
+        invoke CreateEvent, NULL, FALSE, FALSE, NULL
+
+        mov hEventStart1, eax
+
+        mov  eax, OFFSET ThreadProcBullet
+
+        invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
+
+        mov threadControl, eax
 
         ; Inicialização do array de invaders.
         mov esi, offset invaders
@@ -296,25 +337,17 @@ WndProc proc hWin   :DWORD,
           .endif
 
         .elseif wParam == VK_SPACE
-          .if bullet.exists == 0 ; verifica se bullet jah existe
-            ;Adicionando bala
+            .if bullet.exists == 0 ; verifica se bullet jah existe
+                ;Adicionando bala
                 ;existencia
-            mov bullet.exists, 1
+                mov bullet.exists, 1
                 ;posicao X
-            mov eax, ship.x
-            add eax, 12
-            mov bullet.x, eax
+                mov eax, ship.x
+                add eax, 12
+                mov bullet.x, eax
                 ;posicao Y
-            mov bullet.y, INITIAL_Y_BULLET
-
-            invoke CreateEvent, NULL, FALSE, FALSE, NULL
-            mov hEventStart1, eax
-            mov  eax, OFFSET ThreadProcBullet
-            invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
-            mov threadControl, eax
-            invoke CloseHandle, eax
-          .endif
-
+                mov bullet.y, INITIAL_Y_BULLET
+            .endif
         .elseif wParam == VK_RETURN
             .if intro == 1
                 ; Uso estas variaveis para controlar o controle da tela antes do jogo comecar.
@@ -369,13 +402,13 @@ WndProc proc hWin   :DWORD,
             mov cl, 0
             
             loopMoveInvaders:
-                ;x
+                ; x
                 mov eax, qttX
-                add dword ptr [esi], eax ;.x
+                add dword ptr [esi], eax ; .x
 
-                ;y
+                ; y
                 mov eax, qttY
-                add dword ptr [esi+4], eax ;.y
+                add dword ptr [esi+4], eax ; .y
 
                 add esi, INVADER_SIZE
                 inc cl
@@ -384,122 +417,197 @@ WndProc proc hWin   :DWORD,
                 jne loopMoveInvaders
 
             .if isInvert == 0
-            mov isInvert, 1
+                mov isInvert, 1
             .else
-            mov isInvert, 0
+                mov isInvert, 0
+            .endif
+
+            call getRandomNumber
+
+            ;invoke wsprintf, ADDR buffer1, ADDR header_format1, rNumber
+            ;invoke MessageBox, NULL, ADDR buffer1, NULL, MB_OK
+            ; vetor 6 tiros
+
+            .if rNumber < 6
+                ; esi armazena o vetor invaders enquanto edi esta com o vetor bulletInvaders, o qual contem as balas dos invaders.
+                mov esi, offset invaders
+                mov edi, offset bulletInvaders
+
+                ; Setando a posicao para o invader da coluna sorteada.
+                mov ebx, INVADER_SIZE
+                mul ebx
+
+                ; Colocando o vetor na ultima posicao da coluna sorteada conforme random.
+                add esi, rNumber
+                add esi, 270
+
+                ; Movendo o vetor de bala para a bala do invader daquela coluna.
+                add edi, rNumber
+
+                ; Verificar se tiro ja existe na coluna.
+                .if byte ptr [edi+8] == 0
+                    mov cl, 0
+
+                    loopCheckCollumn:
+                        .if byte ptr [esi+8] == 1
+                            mov cl, 6
+                            
+                            ; x do invader
+                            mov eax, dword ptr [esi]
+                            ; Alinhamento da bala
+                            add eax, 14
+                            ; Adicionando ao vetor da bala a posicao x inicial da bala.
+                            mov dword ptr [edi], eax
+
+                            ; y do invader
+                            mov eax, dword ptr [esi+4]
+                            ; Alinhamento da bala
+                            add eax, 22
+                            ; Adicionando ao vetor da bala a posicao y inicial da bala.
+                            mov dword ptr [edi+4], eax
+
+                            mov byte ptr [edi+8], 1
+                        .else
+                            ; Indo checar a posicao superior
+                            sub esi, 54
+                        .endif
+
+                        .if cl != 6
+                            inc cl
+                            jmp loopCheckCollumn
+                        .endif
+                .endif
             .endif
         .endif
 
         invoke InvalidateRect, hWnd, NULL, TRUE
     .elseif uMsg == WM_BULLET
-        .if bullet.exists != 0
-            mov esi, offset invaders
-            mov cl, 0
+        .if intro == 0
+            .if bullet.exists != 0
+                mov esi, offset invaders
+                mov cl, 0
 
-            loopInvaders:
-                mov eax, dword ptr [esi]      ; xI
-                mov xI, eax
-                mov eax, dword ptr [esi+4]    ; yI
-                mov yI, eax
+                loopInvaders:
+                    mov eax, dword ptr [esi]      ; xI
+                    mov xI, eax
+                    mov eax, dword ptr [esi+4]    ; yI
+                    mov yI, eax
 
-                ; Colocando na variavel xMax o valor maximo do invader na localizacao x.
-                mov eax, xI
-                mov xMax, eax
-                add xMax, WIDTH_INVADER
+                    ; Colocando na variavel xMax o valor maximo do invader na localizacao x.
+                    mov eax, xI
+                    mov xMax, eax
+                    add xMax, WIDTH_INVADER
 
-                ; Colocando na variavel yMax o valor maximo do invader na localizacao y.
-                mov eax, yI
-                mov yMax, eax
-                add yMax, HEIGHT_INVADER
+                    ; Colocando na variavel yMax o valor maximo do invader na localizacao y.
+                    mov eax, yI
+                    mov yMax, eax
+                    add yMax, HEIGHT_INVADER
 
-                ; Aqui temos um retangulo o qual determina toda a area ocupada por aquele invader.
-                ; O esquema abaixo representa melhor.
-                ;
-                ; x y          xMax
-                ;
-                ;
-                ; yMax         xMax+yMax
-                ;
-                ; Quando comparamos areas no if, checaremos qualquer evento de colisao.
+                    ; Aqui temos um retangulo o qual determina toda a area ocupada por aquele invader.
+                    ; O esquema abaixo representa melhor.
+                    ;
+                    ; x y          xMax
+                    ;
+                    ;
+                    ; yMax         xMax+yMax
+                    ;
+                    ; Quando comparamos areas no if, checaremos qualquer evento de colisao.
 
-                mov eax, 0
-                mov al, byte ptr [esi+8] ; isAlive
-                mov alive, al
+                    mov eax, 0
+                    mov al, byte ptr [esi+8] ; isAlive
+                    mov alive, al
 
-                ; Estas proximas variaveis representam os xI e yI da bala.
+                    ; Estas proximas variaveis representam os xI e yI da bala.
 
-                mov eax, bullet.x
-                mov xbMax, eax
-                add xbMax, 6
-
-                mov eax, bullet.y
-                mov ybMax, eax
-                add ybMax, 16
-
-                ; A partir deste momento, devo checar a colisao somente se o invader esta vivo.
-                ; Checagem para ver se o invader esta vivo...
-                .if alive != 0
                     mov eax, bullet.x
-                    mov ebx, xbMax
-                    .if eax >= xI && eax <= xMax
-                        mov eax, bullet.y
-                        mov ebx, ybMax
-                        .if eax >= yI && eax <= yMax
-                            mov byte ptr [esi+8], 0
-                            mov bullet.exists, 0
-                        .elseif ebx >= yI && ebx < yMax
-                            mov byte ptr [esi+8], 0
-                            mov bullet.exists, 0
-                        .endif
-                    .elseif ebx >= xI && ebx < xMax
-                        mov eax, bullet.y
-                        mov ebx, ybMax
-                        .if eax >= yI && eax <= yMax
-                            mov byte ptr [esi+8], 0
-                            mov bullet.exists, 0
-                        .elseif ebx >= yI && ebx < yMax
-                            mov byte ptr [esi+8], 0
-                            mov bullet.exists, 0
+                    mov xbMax, eax
+                    add xbMax, 6
+
+                    mov eax, bullet.y
+                    mov ybMax, eax
+                    add ybMax, 16
+
+                    ; A partir deste momento, devo checar a colisao somente se o invader esta vivo.
+                    ; Checagem para ver se o invader esta vivo...
+                    .if alive != 0
+                        mov eax, bullet.x
+                        mov ebx, xbMax
+                        .if eax >= xI && eax <= xMax
+                            mov eax, bullet.y
+                            mov ebx, ybMax
+                            .if eax >= yI && eax <= yMax
+                                mov byte ptr [esi+8], 0
+                                mov bullet.exists, 0
+                            .elseif ebx >= yI && ebx < yMax
+                                mov byte ptr [esi+8], 0
+                                mov bullet.exists, 0
+                            .endif
+                        .elseif ebx >= xI && ebx < xMax
+                            mov eax, bullet.y
+                            mov ebx, ybMax
+                            .if eax >= yI && eax <= yMax
+                                mov byte ptr [esi+8], 0
+                                mov bullet.exists, 0
+                            .elseif ebx >= yI && ebx < yMax
+                                mov byte ptr [esi+8], 0
+                                mov bullet.exists, 0
+                            .endif
                         .endif
                     .endif
+
+                    ; Incremento para checagem da saida.
+                    inc cl
+
+                    add esi, INVADER_SIZE
+
+                    ; Condicao de saida.
+                    cmp cl, AMOUNT_INVADERS
+                    jne loopInvaders
+
+                mov cl, 0
+                mov ch, 0
+                mov esi, offset invaders
+
+                checkWin:
+                    add ch, byte ptr [esi+8]
+                    
+                    inc cl
+
+                    add esi, INVADER_SIZE
+
+                    cmp cl, AMOUNT_INVADERS
+                    jne checkWin
+
+                .if ch == 0
+                    mov intro, 1
+                    mov directionRight, 1
+                    mov isInvert, 0
                 .endif
 
-                ; Incremento para checagem da saida.
-                inc cl
-
-                add esi, INVADER_SIZE
-
-                ; Condicao de saida.
-                cmp cl, AMOUNT_INVADERS
-                jne loopInvaders
-
-            mov cl, 0
-            mov ch, 0
-            mov esi, offset invaders
-
-            checkWin:
-                add ch, byte ptr [esi+8]
-                
-                inc cl
-
-                add esi, INVADER_SIZE
-
-                cmp cl, AMOUNT_INVADERS
-                jne checkWin
-
-            .if ch == 0
-                mov intro, 1
-                mov directionRight, 1
-                mov isInvert, 0
+                sub bullet.y, 4
             .endif
 
-            sub bullet.y, 4
+            .if bullet.y <= 0 ; se bala jah saiu da tela
+                mov bullet.exists, 0
+            .endif
+
+            mov esi, offset bulletInvaders
+
+            mov countBullet, 0
+
+            loopBulletMovement:
+                .if byte ptr [esi+8] == 1
+                    add dword ptr [esi+4], 4
+                .endif
+
+                inc countBullet
+
+                .if countBullet != 6
+                    add esi, 9
+                    jmp loopBulletMovement
+                .endif
 
             invoke InvalidateRect, hWnd, NULL, TRUE
-        .endif
-
-        .if bullet.y <= 0 ; se bala jah saiu da tela
-            mov bullet.exists, 0
         .endif
 
     .elseif uMsg == WM_CLOSE
@@ -544,6 +652,8 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 
     LOCAL iR:DWORD
     LOCAL iC:DWORD
+
+    LOCAL count:BYTE
 
 	invoke  CreateCompatibleDC, hDC
 	mov	memDC, eax
@@ -636,8 +746,28 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
         .if bullet.exists != 0 ; se eh true
             invoke SelectObject, memDC, hBmpBullet
             mov hOld, eax
+
             invoke BitBlt, hDC, bullet.x, bullet.y, bullet.w, bullet.h, memDC, 0, 0, SRCCOPY
         .endif
+
+        mov esi, offset bulletInvaders
+
+        mov count, 0
+
+        loopBullet:
+            .if byte ptr [esi+8] == 1
+                invoke SelectObject, memDC, hBmpBullet
+                mov hOld, eax
+
+                invoke BitBlt, hDC, dword ptr[esi], dword ptr[esi+4], 6, 16, memDC, 0, 0, SRCCOPY
+            .else
+                add esi, 9
+            .endif
+
+            .if count != 6
+                inc count
+                jmp loopBullet
+            .endif
     .endif
 	
 	invoke SelectObject, hDC, hOld
@@ -648,30 +778,27 @@ Paint_Proc endp
 
 ; --------------------- ThreadProcInvaders --------------------------
 ThreadProcInvaders PROC USES ecx Param:DWORD
-  invoke WaitForSingleObject, hEventStart, 500
+    invoke WaitForSingleObject, hEventStart, 500
 
-  .if eax == WAIT_TIMEOUT
-      invoke PostMessage, hWnd, WM_MOVEMENT, NULL, NULL
-      ; Saida do jogo, game over.
-      jmp ThreadProcInvaders
-  .endif
+    .if eax == WAIT_TIMEOUT
+        invoke PostMessage, hWnd, WM_MOVEMENT, NULL, NULL
+        ; Saida do jogo, game over.
+        jmp ThreadProcInvaders
+    .endif
 
-  ret
+    ret
 ThreadProcInvaders endp
 
 ; --------------------- ThreadProcBullet --------------------------
 ThreadProcBullet PROC USES ecx Param:DWORD
-  invoke WaitForSingleObject, hEventStart1, 30
+    invoke WaitForSingleObject, hEventStart1, 30
 
-  .if eax == WAIT_TIMEOUT
-      invoke PostMessage, hWnd, WM_BULLET, NULL, NULL
-      .if bullet.exists != 0
+    .if eax == WAIT_TIMEOUT
+        invoke PostMessage, hWnd, WM_BULLET, NULL, NULL
         jmp ThreadProcBullet
-      .endif
-      invoke ExitThread, threadControl
-  .endif
+    .endif
 
-  ret
+    ret
 ThreadProcBullet endp
 
 end start

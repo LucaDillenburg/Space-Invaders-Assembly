@@ -19,7 +19,7 @@ includelib \masm32\lib\msimg32.lib
 invader struct
     x       dd ?
     y       dd ?
-    alive    db 1
+    alive   db 1
 invader ends
 
 shipStruct struct
@@ -29,6 +29,12 @@ shipStruct struct
     h       dd 20
     lives   db 5
 shipStruct ends
+
+bulletStInv struct
+    x       dd ?
+    y       dd ?
+    exists  db 0
+bulletStInv ends
 
 bulletStruct struct
     x       dd ?
