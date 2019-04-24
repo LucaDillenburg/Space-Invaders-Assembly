@@ -66,6 +66,7 @@ include space-invaders.inc
     hBmpIntro2   dd 0
 
     rNumber dd 0
+    teste dd 0
 
 ; auxiliares (apagar)
     header_format db "A: %d",0
@@ -93,8 +94,8 @@ getRandomNumber proc uses eax
     generate:
         invoke GetTickCount
         invoke nseed, eax
-        ; Random number de 0 a 5
-        invoke nrandom, 5
+        ; Random number de 0 a 6
+        invoke nrandom, 6
         mov rNumber, eax
         ret
 getRandomNumber endp
@@ -426,7 +427,6 @@ WndProc proc hWin   :DWORD,
 
             ;invoke wsprintf, ADDR buffer1, ADDR header_format1, rNumber
             ;invoke MessageBox, NULL, ADDR buffer1, NULL, MB_OK
-            ; vetor 6 tiros
 
             .if rNumber < 6
                 ; esi armazena o vetor invaders enquanto edi esta com o vetor bulletInvaders, o qual contem as balas dos invaders.
@@ -434,15 +434,16 @@ WndProc proc hWin   :DWORD,
                 mov edi, offset bulletInvaders
 
                 ; Setando a posicao para o invader da coluna sorteada.
+                mov eax, rNumber
                 mov ebx, INVADER_SIZE
                 mul ebx
 
                 ; Colocando o vetor na ultima posicao da coluna sorteada conforme random.
-                add esi, rNumber
+                add esi, eax
                 add esi, 270
 
                 ; Movendo o vetor de bala para a bala do invader daquela coluna.
-                add edi, rNumber
+                add edi, eax
 
                 ; Verificar se tiro ja existe na coluna.
                 .if byte ptr [edi+8] == 0
@@ -461,12 +462,13 @@ WndProc proc hWin   :DWORD,
 
                             ; y do invader
                             mov eax, dword ptr [esi+4]
+
                             ; Alinhamento da bala
                             add eax, 22
                             ; Adicionando ao vetor da bala a posicao y inicial da bala.
                             mov dword ptr [edi+4], eax
 
-                            mov byte ptr [edi+8], 1
+                            mov byte ptr [edi+8], 1                                                                                    
                         .else
                             ; Indo checar a posicao superior
                             sub esi, 54
@@ -598,6 +600,66 @@ WndProc proc hWin   :DWORD,
             loopBulletMovement:
                 .if byte ptr [esi+8] == 1
                     add dword ptr [esi+4], 4
+                    
+                    mov eax, dword ptr [esi]
+                    mov xI, eax
+
+                    mov eax, dword ptr [esi+4]
+                    mov yI, eax
+
+                    mov eax, xI
+                    mov xbMax, eax
+                    add xbMax, 6
+
+                    mov eax, yI
+                    mov ybMax, eax
+                    add ybMax, 16
+
+                    mov eax, ship.x
+                    mov xMax, eax
+                    add xMax, 34
+
+                    mov eax, ship.y
+                    mov yMax, eax
+                    add yMax, 20
+
+                    mov eax, xI
+                    mov ebx, xbMax
+                    .if eax >= xI && eax <= xMax
+                        mov eax, yI
+                        mov ebx, ybMax
+                        .if eax >= ship.y && eax <= yMax
+                            mov byte ptr [esi+8], 0
+                            dec ship.lives
+                        .elseif ebx >= ship.y && ebx < yMax
+                            mov byte ptr [esi+8], 0
+                            dec ship.lives
+                        .endif
+                    .elseif ebx >= xI && ebx < xMax
+                        mov eax, yI
+                        mov ebx, ybMax
+                        .if eax >= ship.y && eax <= yMax
+                            mov byte ptr [esi+8], 0
+                            dec ship.lives
+                        .elseif ebx >= ship.y && ebx < yMax
+                            mov byte ptr [esi+8], 0
+                            dec ship.lives
+                        .endif
+                    .endif
+
+                    .if byte ptr [esi+8] == 1
+                        mov eax, dword ptr [esi+4]
+                        add eax, 16
+                        .if eax == 409
+                            mov byte ptr[esi+8], 0
+                        .endif
+                    .endif
+
+                    .if ship.lives == -1
+                        mov intro, 1
+                        jmp updateScrn
+                        ;invoke ExitThread, threadControl
+                    .endif
                 .endif
 
                 inc countBullet
@@ -606,7 +668,7 @@ WndProc proc hWin   :DWORD,
                     add esi, 9
                     jmp loopBulletMovement
                 .endif
-
+            updateScrn:
             invoke InvalidateRect, hWnd, NULL, TRUE
         .endif
 

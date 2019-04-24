@@ -27,7 +27,7 @@ shipStruct struct
     y       dd ?
     w       dd 30
     h       dd 20
-    lives   db 5
+    lives   db 3
 shipStruct ends
 
 bulletStInv struct
