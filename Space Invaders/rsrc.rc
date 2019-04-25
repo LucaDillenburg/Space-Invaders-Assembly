@@ -6,6 +6,7 @@
 #define imgBullet 105
 #define imgIntro1 106
 #define imgIntro2 107
+#define imgBalloon 108
 
 500 ICON MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/ICON.ICO"
 501 icon "imgs/icon.ico"
@@ -18,3 +19,4 @@ imgTitle BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/title.bmp"
 imgBullet BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/bullet.bmp"
 imgIntro1 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/intro-1.bmp"
 imgIntro2 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/intro-2.bmp"
+imgBalloon BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/balloon.bmp"

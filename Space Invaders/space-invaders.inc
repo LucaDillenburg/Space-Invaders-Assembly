@@ -22,6 +22,15 @@ invader struct
     alive   db 1
 invader ends
 
+balloonStruct struct
+    x     dd ?
+    y     dd ?
+    speed dd ?
+    max   dd ?
+    side  dd ?
+    alive db 0
+balloonStruct ends
+
 shipStruct struct
     x       dd ?
     y       dd ?
@@ -61,9 +70,11 @@ bulletStruct ends
     imgBullet   equ 105
     imgIntro1   equ 106
     imgIntro2   equ 107
+    imgBalloon  equ 108
 
     WM_MOVEMENT equ WM_USER+100h
     WM_BULLET equ WM_USER+101h
+    WM_BALLOON equ WM_USER+102h
 
 	CREF_TRANSPARENT  equ 0FF00FFh
 	CREF_TRANSPARENT2 equ 0FF0000h
@@ -114,3 +125,4 @@ Paint_Proc	PROTO :DWORD, :DWORD
 
 ThreadProcInvaders PROTO :DWORD
 ThreadProcBullet   PROTO :DWORD
+ThreadProcBalloon  PROTO :DWORD

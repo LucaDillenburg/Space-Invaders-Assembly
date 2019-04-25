@@ -51,10 +51,15 @@ include space-invaders.inc
     hInstance     dd 0
 
     ThreadID dd 0
-    hThread dd 0
-    threadControl dd 0
+    
+    ; Variaveis para controlar as threads
+    threadControlMovement dd 0
+    threadControlBullet   dd 0
+    threadControlBalloon  dd 0
+
     hEventStart  dd 0
     hEventStart1 dd 0
+    hEventStart2 dd 0
 
     hBmpInvaders dd 0
     hBmpAircraft dd 0
@@ -64,9 +69,9 @@ include space-invaders.inc
     hBmpBullet   dd 0
     hBmpIntro1   dd 0
     hBmpIntro2   dd 0
+    hBmpBalloon  dd 0
 
     rNumber dd 0
-    teste dd 0
 
 ; auxiliares (apagar)
     header_format db "A: %d",0
@@ -81,6 +86,9 @@ include space-invaders.inc
     bullet bulletStruct <>
     bulletInvaders bulletStInv 6 dup(<1,1>)
     invaders invader AMOUNT_INVADERS dup(<1,1>)
+    balloon balloonStruct <>
+
+    score dd 0
 
     qttX dd 0
     qttY dd 0
@@ -91,14 +99,22 @@ include space-invaders.inc
 .code
 
 getRandomNumber proc uses eax
-    generate:
         invoke GetTickCount
         invoke nseed, eax
-        ; Random number de 0 a 6
-        invoke nrandom, 6
+        ; Random number de 0 a 11
+        invoke nrandom, 12
         mov rNumber, eax
         ret
 getRandomNumber endp
+
+getRandomSide proc uses eax
+        invoke GetTickCount
+        invoke nseed, eax
+        ; Random number de 0 a 1
+        invoke nrandom, 2
+        mov balloon.side, eax
+        ret
+getRandomSide endp
 
 start:
     invoke GetModuleHandle, NULL ; provides the instance handle
@@ -127,6 +143,9 @@ start:
 
     invoke LoadBitmap, hInstance, imgIntro2
     mov hBmpIntro2, eax
+
+    invoke LoadBitmap, hInstance, imgBalloon
+    mov hBmpBalloon, eax
 
     invoke GetCommandLine        ; provides the command line address
     mov CommandLine, eax
@@ -280,7 +299,7 @@ WndProc proc hWin   :DWORD,
 
         inc ThreadID
 
-	    mov hThread, eax
+	    mov threadControlMovement, eax
 
         ; Thread da bala.
 
@@ -292,7 +311,9 @@ WndProc proc hWin   :DWORD,
 
         invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
 
-        mov threadControl, eax
+        inc ThreadID
+
+        mov threadControlBullet, eax
 
         ; Inicialização do array de invaders.
         mov esi, offset invaders
@@ -329,26 +350,34 @@ WndProc proc hWin   :DWORD,
 
     .elseif uMsg == WM_KEYDOWN
         .if wParam == VK_LEFT
-          .if ship.x >= LEFT_LIMITATOR
-            sub ship.x, AMOUNT_SHIP_MOVES
-          .endif
+            .if intro == 0
+                .if ship.x >= LEFT_LIMITATOR
+                    sub ship.x, AMOUNT_SHIP_MOVES
+                .endif
+            .endif
+
         .elseif wParam == VK_RIGHT
-          .if ship.x <= RIGHT_LIMITATOR
-            add ship.x, AMOUNT_SHIP_MOVES
-          .endif
+            .if intro == 0
+                .if ship.x <= RIGHT_LIMITATOR
+                    add ship.x, AMOUNT_SHIP_MOVES
+                .endif
+            .endif
 
         .elseif wParam == VK_SPACE
-            .if bullet.exists == 0 ; verifica se bullet jah existe
-                ;Adicionando bala
-                ;existencia
-                mov bullet.exists, 1
-                ;posicao X
-                mov eax, ship.x
-                add eax, 12
-                mov bullet.x, eax
-                ;posicao Y
-                mov bullet.y, INITIAL_Y_BULLET
+            .if intro == 0
+                .if bullet.exists == 0 ; verifica se bullet jah existe
+                    ;Adicionando bala
+                    ;existencia
+                    mov bullet.exists, 1
+                    ;posicao X
+                    mov eax, ship.x
+                    add eax, 12
+                    mov bullet.x, eax
+                    ;posicao Y
+                    mov bullet.y, INITIAL_Y_BULLET
+                .endif
             .endif
+
         .elseif wParam == VK_RETURN
             .if intro == 1
                 ; Uso estas variaveis para controlar o controle da tela antes do jogo comecar.
@@ -584,6 +613,16 @@ WndProc proc hWin   :DWORD,
                     mov intro, 1
                     mov directionRight, 1
                     mov isInvert, 0
+                .elseif ch == 12 || ch == 24
+                    invoke CreateEvent, NULL, FALSE, FALSE, NULL
+
+                    mov hEventStart2, eax
+
+                    mov  eax, OFFSET ThreadProcBalloon
+
+                    invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
+
+                    mov threadControlBalloon, eax
                 .endif
 
                 sub bullet.y, 4
@@ -600,18 +639,12 @@ WndProc proc hWin   :DWORD,
             loopBulletMovement:
                 .if byte ptr [esi+8] == 1
                     add dword ptr [esi+4], 4
-                    
-                    mov eax, dword ptr [esi]
-                    mov xI, eax
 
-                    mov eax, dword ptr [esi+4]
-                    mov yI, eax
-
-                    mov eax, xI
+                    mov eax, dword ptr[esi]
                     mov xbMax, eax
                     add xbMax, 6
 
-                    mov eax, yI
+                    mov eax, dword ptr[esi+4]
                     mov ybMax, eax
                     add ybMax, 16
 
@@ -623,10 +656,15 @@ WndProc proc hWin   :DWORD,
                     mov yMax, eax
                     add yMax, 20
 
-                    mov eax, xI
+                    ; bullet.x - dword ptr [esi]
+                    ; bullet.y - dword ptr [esi+4]
+                    ; xI - ship.x
+                    ; yI - ship.y
+
+                    mov eax, dword ptr [esi]
                     mov ebx, xbMax
-                    .if eax >= xI && eax <= xMax
-                        mov eax, yI
+                    .if eax >= ship.x && eax <= xMax
+                        mov eax, dword ptr [esi+4]
                         mov ebx, ybMax
                         .if eax >= ship.y && eax <= yMax
                             mov byte ptr [esi+8], 0
@@ -635,8 +673,8 @@ WndProc proc hWin   :DWORD,
                             mov byte ptr [esi+8], 0
                             dec ship.lives
                         .endif
-                    .elseif ebx >= xI && ebx < xMax
-                        mov eax, yI
+                    .elseif ebx >= ship.x && ebx < xMax
+                        mov eax, dword ptr [esi+4]
                         mov ebx, ybMax
                         .if eax >= ship.y && eax <= yMax
                             mov byte ptr [esi+8], 0
@@ -647,6 +685,7 @@ WndProc proc hWin   :DWORD,
                         .endif
                     .endif
 
+                    ; Ando com a bala se esta ainda existe...
                     .if byte ptr [esi+8] == 1
                         mov eax, dword ptr [esi+4]
                         add eax, 16
@@ -669,6 +708,39 @@ WndProc proc hWin   :DWORD,
                     jmp loopBulletMovement
                 .endif
             updateScrn:
+            invoke InvalidateRect, hWnd, NULL, TRUE
+        .endif
+
+    .elseif uMsg == WM_BALLOON
+        .if intro == 0
+            .if balloon.alive == 0
+                ; Programacao da movimentacao do balao...
+                ; Deve-se sortear a posicao do balao
+                call getRandomSide
+
+                ; Configuracoes para o balao, em relacao a sua quantidade de movimento e posicao maxima ate a borda.
+                .if balloon.side == 0
+                    mov balloon.x, -20
+                    mov balloon.y, 10
+                    mov balloon.speed, 5
+                    mov balloon.max, 630
+                .elseif balloon.side == 1
+                    mov balloon.x, 640
+                    mov balloon.y, 10
+                    mov balloon.speed, -5
+                    mov balloon.max, -30
+                .endif
+
+                mov balloon.alive, 1
+            .endif
+
+            ; Checando se o balao atingiu ao fim do percurso.
+            mov eax, balloon.x
+            .if eax != balloon.max
+                mov eax, balloon.speed
+                add balloon.x, eax
+            .endif
+
             invoke InvalidateRect, hWnd, NULL, TRUE
         .endif
 
@@ -830,6 +902,13 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
                 inc count
                 jmp loopBullet
             .endif
+
+        .if balloon.alive == 1
+            invoke SelectObject, memDC, hBmpBalloon
+            mov hOld, eax
+
+            invoke BitBlt, hDC, balloon.x, balloon.y, 30, 16, memDC, 0, 0, SRCCOPY
+        .endif
     .endif
 	
 	invoke SelectObject, hDC, hOld
@@ -838,7 +917,7 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	return 0
 Paint_Proc endp
 
-; --------------------- ThreadProcInvaders --------------------------
+; --------------------- ThreadProcInvaders ------------------------
 ThreadProcInvaders PROC USES ecx Param:DWORD
     invoke WaitForSingleObject, hEventStart, 500
 
@@ -853,7 +932,7 @@ ThreadProcInvaders endp
 
 ; --------------------- ThreadProcBullet --------------------------
 ThreadProcBullet PROC USES ecx Param:DWORD
-    invoke WaitForSingleObject, hEventStart1, 30
+    invoke WaitForSingleObject, hEventStart1, 25
 
     .if eax == WAIT_TIMEOUT
         invoke PostMessage, hWnd, WM_BULLET, NULL, NULL
@@ -862,5 +941,22 @@ ThreadProcBullet PROC USES ecx Param:DWORD
 
     ret
 ThreadProcBullet endp
+
+; --------------------- ThreadProcBalloon -------------------------
+ThreadProcBalloon PROC USES ecx Param:DWORD
+    invoke WaitForSingleObject, hEventStart2, 600
+
+    .if eax == WAIT_TIMEOUT
+        invoke PostMessage, hWnd, WM_BALLOON, NULL, NULL
+        .if balloon.alive == 1
+            jmp ThreadProcBalloon
+        .endif
+    .endif
+
+    ; Saio da thread se o balao nao existe mais
+    invoke ExitThread, threadControlBalloon
+
+    ret
+ThreadProcBalloon endp
 
 end start
