@@ -272,6 +272,8 @@ WndProc proc hWin   :DWORD,
 
     LOCAL countBullet:BYTE
 
+    LOCAL rct:RECT
+
 ; Tratar as mensagens mandadas pelo sistema operacional (tais mensagens chegam nesse metodo atraves dos parametros)
 ; ps: Each message can have additional values associated with it in the two parameters, wParam & lParam
 
@@ -353,6 +355,13 @@ WndProc proc hWin   :DWORD,
             .if intro == 0
                 .if ship.x >= LEFT_LIMITATOR
                     sub ship.x, AMOUNT_SHIP_MOVES
+
+                    mov rct.left, 20
+                    mov rct.top, 30
+                    mov rct.right, 20
+                    mov rct.bottom, 30
+
+                    invoke InvalidateRect, hWnd, addr rct, TRUE
                 .endif
             .endif
 
@@ -360,6 +369,13 @@ WndProc proc hWin   :DWORD,
             .if intro == 0
                 .if ship.x <= RIGHT_LIMITATOR
                     add ship.x, AMOUNT_SHIP_MOVES
+
+                    mov rct.left, 20
+                    mov rct.top, 30
+                    mov rct.right, 20
+                    mov rct.bottom, 30
+
+                    invoke InvalidateRect, hWnd, addr rct, TRUE
                 .endif
             .endif
 
@@ -375,6 +391,7 @@ WndProc proc hWin   :DWORD,
                     mov bullet.x, eax
                     ;posicao Y
                     mov bullet.y, INITIAL_Y_BULLET
+                    invoke InvalidateRect, hWnd, NULL, TRUE
                 .endif
             .endif
 
@@ -383,10 +400,9 @@ WndProc proc hWin   :DWORD,
                 ; Uso estas variaveis para controlar o controle da tela antes do jogo comecar.
                 mov directionRight, 0
                 mov isInvert, 0
+                invoke InvalidateRect, hWnd, NULL, TRUE
             .endif
         .endif
-
-        invoke InvalidateRect, hWnd, NULL, TRUE
 
     .elseif uMsg == WM_MOVEMENT
         .if intro == 0
@@ -656,11 +672,6 @@ WndProc proc hWin   :DWORD,
                     mov yMax, eax
                     add yMax, 20
 
-                    ; bullet.x - dword ptr [esi]
-                    ; bullet.y - dword ptr [esi+4]
-                    ; xI - ship.x
-                    ; yI - ship.y
-
                     mov eax, dword ptr [esi]
                     mov ebx, xbMax
                     .if eax >= ship.x && eax <= xMax
@@ -707,8 +718,9 @@ WndProc proc hWin   :DWORD,
                     add esi, 9
                     jmp loopBulletMovement
                 .endif
+
             updateScrn:
-            invoke InvalidateRect, hWnd, NULL, TRUE
+                invoke InvalidateRect, hWnd, NULL, TRUE
         .endif
 
     .elseif uMsg == WM_BALLOON
@@ -722,12 +734,12 @@ WndProc proc hWin   :DWORD,
                 .if balloon.side == 0
                     mov balloon.x, -20
                     mov balloon.y, 10
-                    mov balloon.speed, 5
-                    mov balloon.max, 630
+                    mov balloon.speed, 1
+                    mov balloon.max, 650
                 .elseif balloon.side == 1
                     mov balloon.x, 640
                     mov balloon.y, 10
-                    mov balloon.speed, -5
+                    mov balloon.speed, -1
                     mov balloon.max, -30
                 .endif
 
@@ -741,7 +753,7 @@ WndProc proc hWin   :DWORD,
                 add balloon.x, eax
             .endif
 
-            invoke InvalidateRect, hWnd, NULL, TRUE
+            ;invoke InvalidateRect, hWnd, NULL, TRUE
         .endif
 
     .elseif uMsg == WM_CLOSE
@@ -944,7 +956,7 @@ ThreadProcBullet endp
 
 ; --------------------- ThreadProcBalloon -------------------------
 ThreadProcBalloon PROC USES ecx Param:DWORD
-    invoke WaitForSingleObject, hEventStart2, 600
+    invoke WaitForSingleObject, hEventStart2, 500
 
     .if eax == WAIT_TIMEOUT
         invoke PostMessage, hWnd, WM_BALLOON, NULL, NULL
