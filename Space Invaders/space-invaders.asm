@@ -10,8 +10,9 @@ include space-invaders.inc
 ;          17162 --> André Amadeu Satorres
 ;
 
-; Deve-se fazer a checagem das teclas enquanto o jogo ainda n comecou, intro == 0
-; Fazer os invaders atirarem
+; ARRUMAR TIRO
+; Fazer colisao com barreira
+; Arrumar o restart
 ; Fazer a pontuacao
 ; Fazer quantidade de vidas e niveis mais dificeis dos invaders.
 
@@ -51,11 +52,6 @@ include space-invaders.inc
     hInstance     dd 0
 
     ThreadID dd 0
-    
-    ; Variaveis para controlar as threads
-    threadControlMovement dd 0
-    threadControlBullet   dd 0
-    threadControlBalloon  dd 0
 
     hEventStart  dd 0
     hEventStart1 dd 0
@@ -95,6 +91,16 @@ include space-invaders.inc
 
     ; Controlar comeco do jogo
     intro dd 1
+
+    ; movimento da nave
+    userMove db NOT_MOVING
+
+    ; Variaveis para controlar as threads
+    threadControl dd 0
+    amntMenuThread db 0
+    amntThreadMoveBalloon db 0
+    amntThreadMoveBullet db 0
+    amntThreadMoveInvaders db 0
 
 .code
 
@@ -289,33 +295,12 @@ WndProc proc hWin   :DWORD,
 	    invoke EndPaint, hWin, ADDR Ps
 
     .elseif uMsg == WM_CREATE ; This message is sent to WndProc during the CreateWindowEx 
-        ; Thread dos invaders.
-
+        ; Main Thread: movimentacao da aircraft, dos invaders, dos tiros e do balloon.
         invoke CreateEvent, NULL, FALSE, FALSE, NULL
-
 	    mov hEventStart, eax
-		
-	    mov eax, OFFSET ThreadProcInvaders
-
+	    mov eax, OFFSET MainThreadProc
 	    invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
-
-        inc ThreadID
-
-	    mov threadControlMovement, eax
-
-        ; Thread da bala.
-
-        invoke CreateEvent, NULL, FALSE, FALSE, NULL
-
-        mov hEventStart1, eax
-
-        mov  eax, OFFSET ThreadProcBullet
-
-        invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
-
-        inc ThreadID
-
-        mov threadControlBullet, eax
+        mov threadControl, eax
 
         ; Inicialização do array de invaders.
         mov esi, offset invaders
@@ -351,33 +336,10 @@ WndProc proc hWin   :DWORD,
             jne loopInitializeInvaders
 
     .elseif uMsg == WM_KEYDOWN
-        .if wParam == VK_LEFT
-            .if intro == 0
-                .if ship.x >= LEFT_LIMITATOR
-                    sub ship.x, AMOUNT_SHIP_MOVES
-
-                    mov rct.left, 20
-                    mov rct.top, 30
-                    mov rct.right, 20
-                    mov rct.bottom, 30
-
-                    invoke InvalidateRect, hWnd, addr rct, TRUE
-                .endif
-            .endif
-
-        .elseif wParam == VK_RIGHT
-            .if intro == 0
-                .if ship.x <= RIGHT_LIMITATOR
-                    add ship.x, AMOUNT_SHIP_MOVES
-
-                    mov rct.left, 20
-                    mov rct.top, 30
-                    mov rct.right, 20
-                    mov rct.bottom, 30
-
-                    invoke InvalidateRect, hWnd, addr rct, TRUE
-                .endif
-            .endif
+        .if wParam == VK_LEFT && intro == 0
+            mov userMove, MOVING_LEFT
+        .elseif wParam == VK_RIGHT && intro == 0
+            mov userMove, MOVING_RIGHT
 
         .elseif wParam == VK_SPACE
             .if intro == 0
@@ -391,7 +353,6 @@ WndProc proc hWin   :DWORD,
                     mov bullet.x, eax
                     ;posicao Y
                     mov bullet.y, INITIAL_Y_BULLET
-                    invoke InvalidateRect, hWnd, NULL, TRUE
                 .endif
             .endif
 
@@ -400,8 +361,14 @@ WndProc proc hWin   :DWORD,
                 ; Uso estas variaveis para controlar o controle da tela antes do jogo comecar.
                 mov directionRight, 0
                 mov isInvert, 0
-                invoke InvalidateRect, hWnd, NULL, TRUE
             .endif
+        .endif
+    
+    .elseif uMsg == WM_KEYUP
+        .if wParam == VK_LEFT && userMove == MOVING_LEFT && intro == 0
+            mov userMove, NOT_MOVING
+        .elseif wParam == VK_RIGHT && userMove == MOVING_RIGHT && intro == 0
+            mov userMove, NOT_MOVING
         .endif
 
     .elseif uMsg == WM_MOVEMENT
@@ -527,7 +494,6 @@ WndProc proc hWin   :DWORD,
             .endif
         .endif
 
-        invoke InvalidateRect, hWnd, NULL, TRUE
     .elseif uMsg == WM_BULLET
         .if intro == 0
             .if bullet.exists != 0
@@ -630,15 +596,7 @@ WndProc proc hWin   :DWORD,
                     mov directionRight, 1
                     mov isInvert, 0
                 .elseif ch == 12 || ch == 24
-                    invoke CreateEvent, NULL, FALSE, FALSE, NULL
-
-                    mov hEventStart2, eax
-
-                    mov  eax, OFFSET ThreadProcBalloon
-
-                    invoke CreateThread, NULL, NULL, eax, NULL, NORMAL_PRIORITY_CLASS, ADDR ThreadID
-
-                    mov threadControlBalloon, eax
+                    mov balloon.alive, 1
                 .endif
 
                 sub bullet.y, 4
@@ -708,7 +666,6 @@ WndProc proc hWin   :DWORD,
                     .if ship.lives == -1
                         mov intro, 1
                         jmp updateScrn
-                        ;invoke ExitThread, threadControl
                     .endif
                 .endif
 
@@ -720,7 +677,6 @@ WndProc proc hWin   :DWORD,
                 .endif
 
             updateScrn:
-                invoke InvalidateRect, hWnd, NULL, TRUE
         .endif
 
     .elseif uMsg == WM_BALLOON
@@ -752,8 +708,6 @@ WndProc proc hWin   :DWORD,
                 mov eax, balloon.speed
                 add balloon.x, eax
             .endif
-
-            ;invoke InvalidateRect, hWnd, NULL, TRUE
         .endif
 
     .elseif uMsg == WM_CLOSE
@@ -929,46 +883,65 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	return 0
 Paint_Proc endp
 
-; --------------------- ThreadProcInvaders ------------------------
-ThreadProcInvaders PROC USES ecx Param:DWORD
-    invoke WaitForSingleObject, hEventStart, 500
+
+; --------------------- MainThread ------------------------
+MainThreadProc PROC USES ecx Param:DWORD
+    LOCAL rct:RECT
+
+    invoke WaitForSingleObject, hEventStart, MILISECONDS_MAIN_THREAD
 
     .if eax == WAIT_TIMEOUT
-        invoke PostMessage, hWnd, WM_MOVEMENT, NULL, NULL
-        ; Saida do jogo, game over.
-        jmp ThreadProcInvaders
-    .endif
+        .if intro == 1
+            inc amntMenuThread
+            .if amntMenuThread == PROPORC_THREAD_MOVE_INVADERS
+                ; printar menu e inverter variavel que diz se estah piscando
+                invoke InvalidateRect, hWnd, NULL, TRUE
+                mov amntMenuThread, 0
+            .endif
+        .else
+            ; movimentar aircraft
+            .if userMove != NOT_MOVING
+                .if userMove == MOVING_LEFT && ship.x >= LEFT_LIMITATOR
+                    sub ship.x, AMOUNT_SHIP_MOVES
+                .elseif userMove == MOVING_RIGHT && ship.x <= RIGHT_LIMITATOR
+                    add ship.x, AMOUNT_SHIP_MOVES
+                .endif
+            .endif
 
-    ret
-ThreadProcInvaders endp
+            ; se estiver na hora de fazer movimentacao dos invaders
+            inc amntThreadMoveInvaders
+            .if amntThreadMoveInvaders == PROPORC_THREAD_MOVE_INVADERS
+                ; movimentacao dos invaders
+                invoke PostMessage, hWnd, WM_MOVEMENT, NULL, NULL
+                mov amntThreadMoveInvaders, 0
+            .endif
 
-; --------------------- ThreadProcBullet --------------------------
-ThreadProcBullet PROC USES ecx Param:DWORD
-    invoke WaitForSingleObject, hEventStart1, 25
+            ; se estiver na hora de fazer movimentacao das bullets
+            inc amntThreadMoveBullet
+            .if amntThreadMoveBullet == PROPORC_THREAD_MOVE_BULLET
+                ; movimentacao das bullets
+                invoke PostMessage, hWnd, WM_BULLET, NULL, NULL
+                mov amntThreadMoveBullet, 0
+            .endif
 
-    .if eax == WAIT_TIMEOUT
-        invoke PostMessage, hWnd, WM_BULLET, NULL, NULL
-        jmp ThreadProcBullet
-    .endif
+            ; se estiver na hora de fazer movimentacao do balloon
+            .if balloon.alive != 0 ;if balloon alive
+                inc amntThreadMoveBalloon
+                .if amntThreadMoveBalloon == PROPORC_THREAD_MOVE_BALLOON
+                    ; movimentacao das balloon
+                    invoke PostMessage, hWnd, WM_BALLOON, NULL, NULL
 
-    ret
-ThreadProcBullet endp
-
-; --------------------- ThreadProcBalloon -------------------------
-ThreadProcBalloon PROC USES ecx Param:DWORD
-    invoke WaitForSingleObject, hEventStart2, 500
-
-    .if eax == WAIT_TIMEOUT
-        invoke PostMessage, hWnd, WM_BALLOON, NULL, NULL
-        .if balloon.alive == 1
-            jmp ThreadProcBalloon
+                    mov amntThreadMoveBalloon, 0
+                .endif
+            .endif
+        
+            invoke InvalidateRect, hWnd, NULL, TRUE
         .endif
+
+        jmp MainThreadProc
     .endif
 
-    ; Saio da thread se o balao nao existe mais
-    invoke ExitThread, threadControlBalloon
-
     ret
-ThreadProcBalloon endp
+MainThreadProc endp
 
 end start

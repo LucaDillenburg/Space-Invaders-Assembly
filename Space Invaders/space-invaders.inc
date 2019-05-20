@@ -91,8 +91,8 @@ bulletStruct ends
     LEFT_LIMITATOR equ 136
     RIGHT_LIMITATOR equ 466
 
-    AMOUNT_INVADERS_MOVE_X   equ 4;20
-    AMOUNT_INVADERS_MOVE_Y   equ 20 ;30
+    AMOUNT_INVADERS_MOVE_X   equ 4
+    AMOUNT_INVADERS_MOVE_Y   equ 20
     LEFT_LIMITATOR_INVADERS  equ 81
     RIGHT_LIMITATOR_INVADERS equ 449
 
@@ -105,6 +105,14 @@ bulletStruct ends
     WIDTH_INVADER equ 34
     HEIGHT_INVADER equ 20
 
+    NOT_MOVING equ 0
+    MOVING_LEFT equ 1
+    MOVING_RIGHT equ 2
+
+    MILISECONDS_MAIN_THREAD equ 30 ; tempo de intervalo da thread principal
+    PROPORC_THREAD_MOVE_BULLET equ 8
+    PROPORC_THREAD_MOVE_BALLOON equ 15
+    PROPORC_THREAD_MOVE_INVADERS equ 10
 
 ;=================
 ; data
@@ -123,6 +131,4 @@ WndProc PROTO :DWORD,:DWORD,:DWORD,:DWORD
 TopXY PROTO   :DWORD,:DWORD
 Paint_Proc	PROTO :DWORD, :DWORD
 
-ThreadProcInvaders PROTO :DWORD
-ThreadProcBullet   PROTO :DWORD
-ThreadProcBalloon  PROTO :DWORD
+MainThreadProc PROTO :DWORD
