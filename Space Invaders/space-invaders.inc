@@ -25,7 +25,7 @@ invader ends
 balloonStruct struct
     x     dd ?
     y     dd ?
-    speed dd ?
+    speed dd 0
     max   dd ?
     side  dd ?
     alive db 0
@@ -109,10 +109,22 @@ bulletStruct ends
     MOVING_LEFT equ 1
     MOVING_RIGHT equ 2
 
-    MILISECONDS_MAIN_THREAD equ 30 ; tempo de intervalo da thread principal
-    PROPORC_THREAD_MOVE_BULLET equ 8
-    PROPORC_THREAD_MOVE_BALLOON equ 15
-    PROPORC_THREAD_MOVE_INVADERS equ 10
+    ; Left side
+    BALLOON_LEFT_X equ -20
+    BALLOON_LEFT_MAX_X equ 650
+
+    ;Right side
+    BALLOON_RIGHT_X equ 640
+    BALLOON_RIGHT_MAX_X equ -30
+
+    ; Common y
+    BALLOON_START_Y equ 10
+    BALLOON_SPEED equ 5
+
+    MILISECONDS_MAIN_THREAD equ 25 ; tempo de intervalo da thread principal
+    PROPORC_THREAD_MOVE_BULLET equ 1
+    PROPORC_THREAD_MOVE_BALLOON equ 5
+    PROPORC_THREAD_MOVE_INVADERS equ 20
 
 ;=================
 ; data
@@ -120,7 +132,7 @@ bulletStruct ends
 .data
 
 
-.data? 
+.data?
 
 ;=================
 ; prototypes
