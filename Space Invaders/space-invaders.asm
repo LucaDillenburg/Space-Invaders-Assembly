@@ -68,6 +68,17 @@ include space-invaders.inc
     hBmpIntro2   dd 0
     hBmpBalloon  dd 0
 
+    hBmpNumber0 dd 0
+    hBmpNumber1 dd 0
+    hBmpNumber2 dd 0
+    hBmpNumber3 dd 0
+    hBmpNumber4 dd 0
+    hBmpNumber5 dd 0
+    hBmpNumber6 dd 0
+    hBmpNumber7 dd 0
+    hBmpNumber8 dd 0
+    hBmpNumber9 dd 0
+
     rNumber dd 0
 
 ; auxiliares (apagar)
@@ -83,9 +94,8 @@ include space-invaders.inc
     bullet bulletStruct <>
     bulletInvaders bulletStInv 6 dup(<1,1>)
     invaders invader AMOUNT_INVADERS dup(<1,1>)
+    numbers numberStruct <>
     balloon balloonStruct <>
-
-    score dd 0
 
     qttX dd 0
     qttY dd 0
@@ -156,6 +166,40 @@ start:
 
     invoke LoadBitmap, hInstance, imgBalloon
     mov hBmpBalloon, eax
+
+    ; Carregamento dos numeros do placar.
+
+    invoke LoadBitmap, hInstance, imgNumber0
+    mov hBmpNumber0, eax
+
+    invoke LoadBitmap, hInstance, imgNumber1
+    mov hBmpNumber1, eax
+
+    invoke LoadBitmap, hInstance, imgNumber2
+    mov hBmpNumber2, eax
+
+    invoke LoadBitmap, hInstance, imgNumber3
+    mov hBmpNumber3, eax
+
+    invoke LoadBitmap, hInstance, imgNumber4
+    mov hBmpNumber4, eax
+
+    invoke LoadBitmap, hInstance, imgNumber5
+    mov hBmpNumber5, eax
+
+    invoke LoadBitmap, hInstance, imgNumber6
+    mov hBmpNumber6, eax
+
+    invoke LoadBitmap, hInstance, imgNumber7
+    mov hBmpNumber7, eax
+
+    invoke LoadBitmap, hInstance, imgNumber8
+    mov hBmpNumber8, eax
+
+    invoke LoadBitmap, hInstance, imgNumber9
+    mov hBmpNumber9, eax
+
+    ; Fim do carregamento dos numeros do placar.
 
     invoke GetCommandLine        ; provides the command line address
     mov CommandLine, eax
@@ -584,6 +628,28 @@ WndProc proc hWin   :DWORD,
                   cmp cl, AMOUNT_INVADERS
                   jne loopInvaders
 
+              .if bullet.exists == 0
+                  mov numbers.n1, 0
+                  mov numbers.n2, 0
+                  mov numbers.n3, 0
+                  mov numbers.n4, 0
+                  mov numbers.n5, 0
+
+                  .if cl >= 0 && cl <= 5
+                      add ship.points, 30
+                  .elseif cl >= 6 && cl <= 11
+                      add ship.points, 25
+                  .elseif cl >= 12 && cl <= 17
+                      add ship.points, 20
+                  .elseif cl >= 18 && cl <= 23
+                      add ship.points, 15
+                  .elseif cl >= 24 && cl <= 29
+                      add ship.points, 10
+                  .elseif cl >= 30 && cl <= 35
+                      add ship.points, 5
+                  .endif
+              .endif
+
               mov cl, 0
               mov ch, 0
               mov esi, offset invaders
@@ -766,6 +832,8 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
     LOCAL iC:DWORD
 
     LOCAL count:BYTE
+    LOCAL countN:DWORD
+    LOCAL points:DWORD
 
 	invoke  CreateCompatibleDC, hDC
 	mov	memDC, eax
@@ -880,6 +948,105 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
                 inc count
                 jmp loopBullet
             .endif
+
+
+        .if ship.points < 10
+            add numbers.n1, 5
+            mov countN, 1
+        .elseif ship.points < 100
+            add numbers.n1, 5
+            add numbers.n2, 5
+            mov countN, 2
+        .elseif ship.points < 1000
+            add numbers.n1, 5
+            add numbers.n2, 5
+            add numbers.n3, 5
+            mov countN, 3
+        .elseif ship.points < 10000
+            add numbers.n1, 5
+            add numbers.n2, 5
+            add numbers.n3, 5
+            add numbers.n4, 5
+            mov countN, 4
+        .elseif ship.points < 100000
+            add numbers.n1, 5
+            add numbers.n2, 5
+            add numbers.n3, 5
+            add numbers.n4, 5
+            add numbers.n5, 5
+            mov countN, 5
+        .endif
+
+        mov eax, ship.points
+        mov points, eax
+        mov ebx, 10
+        mov y, 0
+
+        .while TRUE
+            div ebx
+
+            inc y
+
+            .if y == 1 && numbers.n1 != 50
+                mov x, 580
+                mov edx, numbers.n1
+            .elseif y == 2 && numbers.n2 != 50
+                mov x, 530
+                mov edx, numbers.n2
+            .elseif y == 3 && numbers.n3 != 50
+                mov x, 480
+                mov edx, numbers.n3
+            .elseif y == 4 && numbers.n4 != 50
+                mov x, 430
+                mov edx, numbers.n4
+            .elseif y == 5 && numbers.n5 != 50
+                mov x, 380
+                mov edx, numbers.n5
+            .endif
+
+            mov iR, edx
+
+            .if eax == 0
+                invoke SelectObject, memDC, hBmpNumber0
+                invoke BitBlt, hDC, x, 10, 39, iR, memDC, 0, 0, SRCCOPY
+            .elseif eax == 1
+                invoke SelectObject, memDC, hBmpNumber1
+                invoke BitBlt, hDC, x, 10, 19, iR, memDC, 0, 0, SRCCOPY
+            .elseif eax == 2
+                invoke SelectObject, memDC, hBmpNumber2
+                invoke BitBlt, hDC, x, 10, 39, iR, memDC, 0, 0, SRCCOPY
+            .elseif eax == 3
+                invoke SelectObject, memDC, hBmpNumber3
+                invoke BitBlt, hDC, x, 10, 38, iR, memDC, 0, 0, SRCCOPY
+            .elseif eax == 4
+                invoke SelectObject, memDC, hBmpNumber4
+                invoke BitBlt, hDC, x, 10, 39, iR, memDC, 0, 0, SRCCOPY
+            .elseif eax == 5
+                invoke SelectObject, memDC, hBmpNumber5
+                invoke BitBlt, hDC, x, 10, 39, iR, memDC, 0, 0, SRCCOPY
+            .elseif eax == 6
+                invoke SelectObject, memDC, hBmpNumber6
+                invoke BitBlt, hDC, x, 10, 38, iR, memDC, 0, 0, SRCCOPY
+            .elseif eax == 7
+                invoke SelectObject, memDC, hBmpNumber7
+                invoke BitBlt, hDC, x, 10, 38, iR, memDC, 0, 0, SRCCOPY
+            .elseif eax == 8
+                invoke SelectObject, memDC, hBmpNumber8
+                invoke BitBlt, hDC, x, 10, 38, iR, memDC, 0, 0, SRCCOPY
+            .elseif eax == 9
+                invoke SelectObject, memDC, hBmpNumber9
+                invoke BitBlt, hDC, x, 10, 38, iR, memDC, 0, 0, SRCCOPY
+            .endif
+
+            sub points, eax
+            mov eax, points
+
+            mov edx, countN
+            .if y == edx
+                jmp endPrintNumbers
+            .endif
+        .endw
+        endPrintNumbers:
 
         .if balloon.alive == 1
             invoke SelectObject, memDC, hBmpBalloon
