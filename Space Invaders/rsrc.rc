@@ -7,17 +7,9 @@
 #define imgIntro1 106
 #define imgIntro2 107
 #define imgBalloon 108
-#define imgNumber0 109
-#define imgNumber1 110
-#define imgNumber2 111
-#define imgNumber3 112
-#define imgNumber4 113
-#define imgNumber5 114
-#define imgNumber6 115
-#define imgNumber7 116
-#define imgNumber8 117
-#define imgNumber9 118
-
+#define imgScore 109
+#define imgVidas 110
+#define imgGameOver 111
 
 500 ICON MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/ICON.ICO"
 501 icon "imgs/icon.ico"
@@ -31,14 +23,6 @@ imgBullet BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/bullet.bmp"
 imgIntro1 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/intro-1.bmp"
 imgIntro2 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/intro-2.bmp"
 imgBalloon BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/balloon.bmp"
-
-imgNumber0 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/0.bmp"
-imgNumber1 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/1.bmp"
-imgNumber2 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/2.bmp"
-imgNumber3 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/3.bmp"
-imgNumber4 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/4.bmp"
-imgNumber5 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/5.bmp"
-imgNumber6 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/6.bmp"
-imgNumber7 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/7.bmp"
-imgNumber8 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/8.bmp"
-imgNumber9 BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/9.bmp"
+imgScore BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/score.bmp"
+imgVidas BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/vidas.bmp"
+imgGameOver BITMAP MOVEABLE PURE LOADONCALL DISCARDABLE "imgs/game-over.bmp"

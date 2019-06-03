@@ -71,33 +71,25 @@ numberStruct ends
 ; const
 ;=================
 .const
-    imgInvaders equ 100
-    imgAircraft equ 101
-    imgBarrier  equ 102
-    imgGround   equ 103
-    imgTitle_g  equ 104
-    imgBullet   equ 105
-    imgIntro1   equ 106
-    imgIntro2   equ 107
-    imgBalloon  equ 108
-
-    imgNumber0  equ 109
-    imgNumber1  equ 110
-    imgNumber2  equ 111
-    imgNumber3  equ 112
-    imgNumber4  equ 113
-    imgNumber5  equ 114
-    imgNumber6  equ 115
-    imgNumber7  equ 116
-    imgNumber8  equ 117
-    imgNumber9  equ 118
+    imgInvaders  equ 100
+    imgAircraft  equ 101
+    imgBarrier   equ 102
+    imgGround    equ 103
+    imgTitle_g   equ 104
+    imgBullet    equ 105
+    imgIntro1    equ 106
+    imgIntro2    equ 107
+    imgBalloon   equ 108
+    imgScore     equ 109
+    imgVidas     equ 110
+    imgGameOver  equ 111
 
     WM_MOVEMENT equ WM_USER+100h
     WM_BULLET equ WM_USER+101h
     WM_BALLOON equ WM_USER+102h
 
-	CREF_TRANSPARENT  equ 0FF00FFh
-	CREF_TRANSPARENT2 equ 0FF0000h
+	  CREF_TRANSPARENT  equ 0FF00FFh
+	  CREF_TRANSPARENT2 equ 0FF0000h
 
     INVADER_SIZE equ 9
 
@@ -154,6 +146,9 @@ numberStruct ends
     LINE_6_POINTS equ 5
 
     BALLOON_POINTS equ 500
+
+    COLOR_WHITE  equ 0ffffffh
+    COLOR_BLACK equ 0000000h
 
 ;=================
 ; data
