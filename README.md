@@ -1,2 +1,2 @@
 # Space-Invaders-Assembly
-Space Invaders made in Assembly
+Space Invaders developed in Assembly
